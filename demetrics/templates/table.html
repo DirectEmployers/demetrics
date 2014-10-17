@@ -1,7 +1,9 @@
 <html>
   <head>
     <!--Load the AJAX API-->
-    <script type="text/javascript" src="//d2e48ltfsb5exy.cloudfront.net/framework/v2/js/code/jquery-1.7.1.js"></script>
+    <script type="text/javascript" src="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/custom.154-10.js"></script>
+    <link href="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/def.ui.152-21.css" rel="stylesheet" type="text/css">
+    <link href="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/my.jobs.157-13.css" rel="stylesheet" type="text/css">
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
 
@@ -137,43 +139,72 @@
 </head>
 
 <body>
-    <br/>
-    {% if accounts %}
-    <select id="select_account">
-    {% for account in accounts %}
-        <option {% if forloop.first %}SELECTED {% endif %}value="{{account.id}}">{{account.name}}</option>
-    {% endfor %}
-    </select>
-    <select id="select_metric">
-        <option SELECTED value="sessions">Sessions</option>
-        <option value="organicSearches">Organic Traffic</option>
-    </select>
-    Start Date: <input id="start_date"></input>
-    End Date: <input id="end_date"</input>
-    <button id="select_account_button">Fetch</button>
-    <div id="ajax_target"></div>
-    {%else%}
-    <a href="/login">Login with your Google Account</a>
-    {% endif %}
-    {% for ga in ga_data %}
-        {% if forloop.first %}
-        <tr>
-            {% for g,v in ga.items %}<th>{{g}}</th>{%endfor%}
-        </tr>
-        <tr>
-            {% for g,v in ga.items %}<td>{{v}}</td>{%endfor%}
-        </tr>
-        {% else %}
-        <tr>{% for g,v in ga.items %}<td>{{v}}</td>{%endfor%}</tr>
-        {% endif %}
-    {% endfor %}
-    </table>
-    <hr/>
-    {{results}}
-    <div id="rbw_chart_div"></div>
-    <div id="bin_res_chart_div"></div>
-    <div id="saved_schs_grp_chart_div"></div>
-    <div id="new_accts_chart_div"></div>
+<header>
+    <div class="wrapper">
+    <h1> DirectEmployers Metrics Date</h1>
+    </div>
+</header>
+<section>
+    <div class="section subpage">
+        <div class="wrapper">
+            <div class="row">
+                <h2>Google Analytics</h2>
+            </div>
+            <div class="row">
+                <div class="span4">
+                    <div class="formBox">
+                    {% if accounts %}
+                    Account:<br/><select id="select_account">
+                    {% for account in accounts %}
+                        <option {% if forloop.first %}SELECTED {% endif %}value="{{account.id}}">{{account.name}}</option>
+                    {% endfor %}
+                    </select><br/>
+                    Metric:<br/>
+                    <select id="select_metric">
+                        <option SELECTED value="sessions">Sessions</option>
+                        <option value="organicSearches">Organic Traffic</option>
+                    </select><br/>
+                    Start Date:<br/><input id="start_date"></input><br/>
+                    End Date:<br/><input id="end_date"</input><br/>
+                    <button id="select_account_button">Fetch</button>
+                    </div>
+                </div>
+                <div class="span8">
+                    <div class="formBox">
+                    <div id="ajax_target"></div>
+                    {%else%}
+                    <a href="/login">Login with your Google Account</a>
+                    {% endif %}
+                    {% for ga in ga_data %}
+                        {% if forloop.first %}
+                        <tr>
+                            {% for g,v in ga.items %}<th>{{g}}</th>{%endfor%}
+                        </tr>
+                        <tr>
+                            {% for g,v in ga.items %}<td>{{v}}</td>{%endfor%}
+                        </tr>
+                        {% else %}
+                        <tr>{% for g,v in ga.items %}<td>{{v}}</td>{%endfor%}</tr>
+                        {% endif %}
+                    {% endfor %}
+                    </table>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <h2>My.jobs Accounts</h2>
+            </div>
+            <div class="row">
+                <div class="span12">
+                    <div id="rbw_chart_div"></div>
+                    <div id="bin_res_chart_div"></div>
+                    <div id="saved_schs_grp_chart_div"></div>
+                    <div id="new_accts_chart_div"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
     <script>    
     $(document).ready(function(){
       //  getGoogleData($("#select_account").val(),$("#select_metric").val());
@@ -208,9 +239,9 @@
                 metric = $("#select_metric").val();
                 acct_name = $("#select_account option:selected").text();
                 metric_name = $("#select_metric option:selected").text();
-                h_str = "<h2>"+acct_name+" Profiles</h2><h3>"+metric_name+" - ";
-                h_str+= data[0]['start']+" to "+data[0]['end']+"</h3>";
-                h_str+="<table style='font-size: .8em; border: 1px solid #000'>";
+                h_str = "<h3>"+acct_name+" Profiles</h3><h4>"+metric_name+" - ";
+                h_str+= data[0]['start']+" to "+data[0]['end']+"</h4>";
+                h_str+="<table class='table'>";
                 h_str+="<tr><th>Profile</th><th>"+metric_name+"</th></tr>";
                 for(i=0;i<data.length;i++){
                     name = data[i]['name'];
