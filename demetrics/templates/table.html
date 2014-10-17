@@ -148,6 +148,8 @@
         <option SELECTED value="sessions">Sessions</option>
         <option value="organicSearches">Organic Traffic</option>
     </select>
+    Start Date: <input id="start_date"></input>
+    End Date: <input id="end_date"</input>
     <button id="select_account_button">Fetch</button>
     <div id="ajax_target"></div>
     {%else%}
@@ -183,13 +185,23 @@
     function getGoogleData(acct,metric){
         acct = $("#select_account").val();
         metric = $("#select_metric").val();
-        console.log("acct:"+acct+" metric:"+metric);
+        start = $("#start_date").val();
+        end = $("#end_date").val();
+        date_str = ""
+        if (start!=""){
+            date_str+="&start_date="+start;
+        }
+        if (end!=""){
+            date_str+="&end_date="+end;
+        }
         $("#ajax_target").html("Loading...");
         $.ajax({
-            url: "/gapi?accounts="+acct+"&metric="+metric, 
+                url: "/gapi?accounts="+acct+"&metric="+metric+date_str, 
             beforeSend: function(){
-                acct = $("#select_account").prop('disabled', true);
-                metric = $("#select_metric").prop('disabled', true);
+                $("#select_account").prop('disabled', true);
+                $("#select_metric").prop('disabled', true);
+                $("#start_date").prop('disabled', true);
+                $("#end_date").prop('disabled', true);
             },
             success: function(data){
                 acct = $("#select_account").val();
@@ -208,7 +220,8 @@
                 $("#ajax_target").html( h_str ) ;
                 acct = $("#select_account").prop('disabled', false);
                 metric = $("#select_metric").prop('disabled', false);
-
+                $("#start_date").prop('disabled', false);
+                $("#end_date").prop('disabled', false);
             } 
         });
     }
