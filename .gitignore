@@ -1,0 +1,5 @@
+*secrets*
+*.dat
+*.sqlite3
+*.pyc
+*.hide
