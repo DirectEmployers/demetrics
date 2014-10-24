@@ -155,14 +155,21 @@
                     <div class="formBox">
                     {% if accounts %}
                     Account:<br/><select id="select_account">
+                        <option 
+                            value="1101211,6392841,8308612,9599997,12430800,16316580,20577364,23584545,24609654,24939159,25741851,26313745,26937129,27826544,28646010,29216021,29240965,29293285,29613651,29952564,29954972,30367743,30689069,30814211,30824274,30922762,30955275,31390202,32988266,35490901,37974452,40997820,44339952,47178210,50261450,53418614">
+                            All
+                        </option>
                     {% for account in accounts %}
                         <option {% if forloop.first %}SELECTED {% endif %}value="{{account.id}}">{{account.name}}</option>
                     {% endfor %}
                     </select><br/>
                     Metric:<br/>
                     <select id="select_metric">
+                        <option value="none">Select...</option>                        
                         <option SELECTED value="sessions">Sessions</option>
                         <option value="organicSearches">Organic Traffic</option>
+                        <option value="pageViews">Page Views</option>
+                        <option value="users">Unique Visitors</option>
                     </select><br/>
                     Start Date:<br/><input id="start_date"></input><br/>
                     End Date:<br/><input id="end_date"</input><br/>
@@ -205,6 +212,7 @@
         </div>
     </div>
 </section>
+<div id="ajax-busy" style="display: none;">Elapsed time: 0 seconds</div>
     <script>    
     $(document).ready(function(){
       //  getGoogleData($("#select_account").val(),$("#select_metric").val());
@@ -213,9 +221,22 @@
         getGoogleData();
     })
 
-    function getGoogleData(acct,metric){
+    function getGoogleData(){
         acct = $("#select_account").val();
+        acct_len = acct.split(",").length
+        total_time_est = 20*acct_len;
+        time = 0
+        ajax_timer = setInterval(function(){
+                time++;
+                percent = parseInt(time/total_time_est*100)
+                str = "Elapsed time: "+time+" seconds.<br/>Estimate: ("+percent+"%)"
+            $("#ajax-busy").html(str);        
+        },1000)
+        console.log(acct_len)
         metric = $("#select_metric").val();
+        
+        if(metric=="none"){return false;}
+        
         start = $("#start_date").val();
         end = $("#end_date").val();
         date_str = ""
@@ -226,8 +247,14 @@
             date_str+="&end_date="+end;
         }
         $("#ajax_target").html("Loading...");
+        $("#ajax-busy").show();
         $.ajax({
-                url: "/gapi?accounts="+acct+"&metric="+metric+date_str, 
+            url: "/gapi?accounts="+acct+"&metric="+metric+date_str, 
+            xhrFields:{
+                onprogress: function(e){
+                    if (e.lengthComputable) { console.log(e.loaded) }
+                }
+            },
             beforeSend: function(){
                 $("#select_account").prop('disabled', true);
                 $("#select_metric").prop('disabled', true);
@@ -253,6 +280,9 @@
                 metric = $("#select_metric").prop('disabled', false);
                 $("#start_date").prop('disabled', false);
                 $("#end_date").prop('disabled', false);
+                $("#ajax-busy").hide();
+                $("#ajax-busy").html("Elapsed time: 0 seconds");
+                clearInterval(ajax_timer);
             } 
         });
     }

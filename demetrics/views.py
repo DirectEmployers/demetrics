@@ -147,6 +147,7 @@ def ga_ajax(request):
                     ga_data.append(node)
         except:
             pass # error handling would be good, but not a priority yet
+        time.sleep(.25)
 
     if len(ga_data)==0:
         ga_data = "{'name':'error','Metric':'There was an error',}"
@@ -362,7 +363,7 @@ class GoogleAnalytics(object):
                ).execute()
             for p in profiles['items']:
                 properties.append(p)
-            time.sleep(1) # wait between queries to avoid rate limit exceptions
+                
         return properties
     
     def get_default_date(self,date,datetype):
