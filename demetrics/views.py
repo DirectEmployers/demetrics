@@ -35,14 +35,15 @@ def read_my_jobs(request):
     # Accounts created by week
     cursor.execute(redirects_queries["accounts-by-week"])
     new_accounts = cursor.fetchall()
-    new_accounts = sorted(new_accounts)[:-1]
+    new_accounts = sorted(new_accounts)
+    del new_accounts[-1]
     
     # saved searches by group by week
     cursor.execute(redirects_queries["saved-searches-by-group"])
     saved_schs = cursor.fetchall()
     saved_schs = sorted(saved_schs)
-    # The last entry is for the current week and always incomplete
-    ss = __consolidate_rows(saved_schs)[:-1]
+    ss = __consolidate_rows(saved_schs)
+    del ss[-1] # The last entry is for the current week and always incomplete
 
     # Binary Resume Completion
     cursor.execute(redirects_queries["binary-resumes"])
@@ -51,17 +52,16 @@ def read_my_jobs(request):
     for week in binary_resumes:
         total = float(week[1])+float(week[2])
         resume_percentage = int(float(week[1])/total*100)
-        binary_resumes_percentage.append(
-            (week[0], resume_percentage, 100-resume_percentage)
-        )
-
-    binary_resumes_percentage = binary_resumes_percentage[:-1]
+        tup = (week[0], resume_percentage, 100-resume_percentage)
+        binary_resumes_percentage.append(tup)
+    del binary_resumes_percentage[-1]
 
 
     # Resume Completion by Week Joined
     cursor.execute(redirects_queries['resumes-by-week-joined'])
     resumes_by_week = cursor.fetchall()
-    rbw = __consolidate_rows(resumes_by_week)[:-1]
+    rbw = __consolidate_rows(resumes_by_week)
+    del rbw[-1]
 
     # Google API Section
     try: # We only want to run this if there is a valid OAuth object
@@ -106,10 +106,19 @@ def ga_ajax(request):
             content_type="application/json")
         
     accounts = request.GET.get('accounts').split(",")
-    metric = request.GET.get('metric', 'sessions')
+    try:
+        metric = request.GET.get('metric')
+    except KeyError:
+        metric = 'sessions'
     
-    start = request.GET.get('start_date', False)
-    end = request.GET.get('end_date', False)
+    try:
+        start = request.GET.get('start_date')
+    except KeyError:
+        start=False
+    try:
+        end = request.GET.get('end_date')
+    except KeyError:
+        end=False
 
     try:
         props = ga.get_microsite_profiles(serv, accounts)
@@ -139,7 +148,7 @@ def ga_ajax(request):
         except:
             pass # error handling would be good, but not a priority yet
 
-    if not ga_data:
+    if len(ga_data)==0:
         ga_data = "{'name':'error','Metric':'There was an error',}"
 
     try: # sort the results by descending metric count
@@ -175,7 +184,9 @@ def auth_return(request):
     http = httplib2.Http()
     http = credentials.authorize(http)
     storage = Storage(TOKEN_FILE_NAME)
-    if credentials and not credientials.invalid:
+    if credentials is None or credentials.invalid:
+        pass
+    else:
         storage.put(credentials)
         
     data_dict = {'ga_data':token_code,}
@@ -292,10 +303,13 @@ class GoogleAnalytics(object):
         :metric_data:   JSON object with metrics for the requested profile_id
         
         """        
-        start = start or self.get_default_date(False, "start")
-        end = end or self.get_default_date(False, "end")
+        if not start:
+            start = self.get_default_date(False,"start")
+          
+        if not end:
+            end = self.get_default_date(False,"end")
                 
-        ga_metric = "ga:" + metric
+        ga_metric = "ga:"+metric
         metric_data = service.data().ga().get(
             ids='ga:' + profile_id, 
             start_date=start,
@@ -316,8 +330,10 @@ class GoogleAnalytics(object):
         
         """
         ga_accounts = service.management().accounts().list().execute()
-        accounts = [{'id': ai['id'], 'name': ai['name']}
-                    for ai in ga_accounts.get('items')]
+        accounts = []
+        for ai in ga_accounts.get('items'):
+            a = {'id':ai['id'],'name':ai['name']}
+            accounts.append(a)
         return accounts
     
     def get_microsite_profiles(self, service, accounts):
@@ -350,9 +366,10 @@ class GoogleAnalytics(object):
         return properties
     
     def get_default_date(self,date,datetype):
-        # set default start to sunday of previous week and default end to
-        # saturday of previous week
-        date_delta = {'start': 8, 'end': 2}[date_type]
+        if datetype == 'start':
+            date_delta=8 # set default start to sunday of previous week
+        else:
+            date_delta=2 # set default end to saturday of previous week            
         if not date:
             today = datetime.date.today()
             date = today - datetime.timedelta(days=today.weekday()+date_delta)
