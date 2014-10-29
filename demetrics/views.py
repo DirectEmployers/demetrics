@@ -6,6 +6,7 @@ import time
 from apiclient.discovery import build
 from demetrics.queries import redirects as redirects_queries
 from django.conf import settings
+from django.core.urlresolvers import reverse
 from django.db import connection, connections, transaction
 from django.http import HttpResponseRedirect, HttpRequest, HttpResponse
 from django.template import RequestContext
@@ -26,6 +27,21 @@ VIEW_ID = settings.GA_VIEW_ID
 
 locale.setlocale(locale.LC_ALL, 'en_US.utf8')
 
+def read_google(request):
+    # Google API Section
+    try: # We only want to run this if there is a valid OAuth object
+        ga = GoogleAnalytics()
+        serv = ga.initialize_service()
+        accounts = ga.get_microsite_accounts(serv)
+    except: # There are a number of possible exceptions, hence the catch-all
+        accounts = False
+    
+    data_dict = {
+        'accounts': accounts,
+        }
+
+    return render_to_response('google.html', data_dict, RequestContext(request))
+    
 def read_my_jobs(request):
     """
     View object for the DE Metrics homepage. Handles calls to the my.jobs
@@ -65,13 +81,7 @@ def read_my_jobs(request):
     rbw = __consolidate_rows(resumes_by_week)
     del rbw[-1]
 
-    # Google API Section
-    try: # We only want to run this if there is a valid OAuth object
-        ga = GoogleAnalytics()
-        serv = ga.initialize_service()
-        accounts = ga.get_microsite_accounts(serv)
-    except: # There are a number of possible exceptions, hence the catch-all
-        accounts = False
+    
     
     # Build the data dictionary and render the page
     data_dict = {
@@ -79,7 +89,6 @@ def read_my_jobs(request):
         'saved_schs': ss,
         'binary_resumes': binary_resumes_percentage,
         'rbw': rbw, 
-        'accounts': accounts,
         }
 
     return render_to_response('table.html', data_dict, RequestContext(request))
@@ -206,7 +215,7 @@ def auth_return(request):
         
     data_dict = {'ga_data':token_code,}
     
-    return HttpResponseRedirect("/")
+    return HttpResponseRedirect(reverse("read_google"))
 
 
 def __consolidate_rows(db_list):
