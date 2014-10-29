@@ -135,17 +135,26 @@ def ga_ajax(request):
         try:
             if prop_sessions:
                 for row in prop_sessions.get('rows'):
-                    #cell_data = []
+                    #print row
+                    cell_list = []
+                    cell_list_raw = []                    
                     for cell in row:
                         #cell_data.append(cell)
-                        cell_data = int(cell)
-                    cell_data_formated = locale.format("%d", 
-                        cell_data, grouping=True)
+                        cell_data = int(cell)                        
+                        cell_data_formated = locale.format("%d", 
+                            cell_data, grouping=True)
+                        cell_list.append(cell_data_formated)
+                        cell_list_raw.append(cell_data)
+                        
                     node = {
                         'name': prop['name'],
                         'url': prop['websiteUrl'],
-                        metric: cell_data_formated, 
-                        'raw_metric': cell_data, 
+                        #metric: cell_list[0], 
+                        'sessions': cell_list[0],
+                        'users': cell_list[1],
+                        'pageviews': cell_list[2],
+                        'organic': cell_list [3],
+                        'raw_metric': cell_list_raw[0], 
                         'start': ga.get_default_date(start,"start"),
                         'end': ga.get_default_date(end,"end"),
                         }
@@ -315,7 +324,8 @@ class GoogleAnalytics(object):
         if not end:
             end = self.get_default_date(False,"end")
                 
-        ga_metric = "ga:"+metric
+        #ga_metric = "ga:"+metric+",ga:sessions"
+        ga_metric = "ga:sessions,ga:users,ga:pageViews,ga:organicSearches"
         metric_data = service.data().ga().get(
             ids='ga:' + profile_id, 
             start_date=start,
