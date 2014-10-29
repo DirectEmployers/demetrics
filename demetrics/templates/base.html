@@ -1,0 +1,61 @@
+<html>
+  <head>
+    <!--Load the AJAX API-->
+    <script type="text/javascript" src="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/custom.154-10.js"></script>
+    <script type="text/javascript" src="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/custom.154-10.js"></script>
+    <link href="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/def.ui.152-21.css" rel="stylesheet" type="text/css">
+    <link href="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/my.jobs.157-13.css" rel="stylesheet" type="text/css">
+    <style>
+    .table{
+        font-size: .9em;
+    }
+    .table-striped tbody tr:nth-child(odd) td {
+        background-color: #fff;
+    }
+    .table-striped tbody tr:nth-child(even) td {
+        background-color: transparent;
+    }
+    #ajax-busy {
+        display: none; 
+        position: relative; 
+        background-position: left; 
+        height: 20px; 
+        width: 100%; 
+        left: 0; 
+        top: 0;
+        color: #000;
+        text-align: left;
+        text-indent: 100px;
+        font-size: .9em;
+    }
+    .progress_bar {
+        background-color: rgba(0,255,0,.5);
+        display:  block;
+        height: 100%;
+        margin-top:  -20px;
+        width: 0;
+    }
+    </style>
+    {% block html-header %}{% endblock %}
+</head>
+
+<body>
+<header>
+    <div class="wrapper">
+    <h1> DirectEmployers Metrics Date</h1>
+    </div>
+</header>
+<section>
+    <div class="section subpage">
+        <div class="wrapper">
+        <div class="row">
+                <a href="{% url 'read_my_jobs' %}">My.jobs Account Metrics</a> | 
+                <a href="{% url 'read_google' %}">.jobs Web Traffic</a>
+        </div>        
+        {% block content %}{% endblock %}
+        </div>
+    </div>
+</section>
+{% block footer-script %}{% endblock %}
+</body>
+</html>
