@@ -2,8 +2,17 @@
   <head>
     <!--Load the AJAX API-->
     <script type="text/javascript" src="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/custom.154-10.js"></script>
+    <script type="text/javascript" src="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/custom.154-10.js"></script>
     <link href="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/def.ui.152-21.css" rel="stylesheet" type="text/css">
     <link href="//d2e48ltfsb5exy.cloudfront.net/content_mj/files/my.jobs.157-13.css" rel="stylesheet" type="text/css">
+    <style>
+    .table-striped tbody tr:nth-child(odd) td {
+        background-color: #fff;
+    }
+    .table-striped tbody tr:nth-child(even) td {
+        background-color: transparent;
+    }
+    </style>
     <script type="text/javascript" src="https://www.google.com/jsapi"></script>
     <script type="text/javascript">
 
@@ -152,7 +161,8 @@
             </div>
             <div class="row">
                 <div class="span4">
-                    <div class="formBox">
+                    <div class="sidebar">
+                    <h2 class="top">Search</h2>
                     {% if accounts %}
                     Account:<br/><select id="select_account">
                         <option 
@@ -173,12 +183,26 @@
                     </select><br/>
                     Start Date:<br/><input id="start_date"></input><br/>
                     End Date:<br/><input id="end_date"</input><br/>
-                    <button id="select_account_button">Fetch</button>
+                    <button id="select_account_button" class="primary btn">
+                        Get Data
+                    </button>
                     </div>
                 </div>
                 <div class="span8">
-                    <div class="formBox">
-                    <div id="ajax_target"></div>
+                    <div class="sidebar">
+                    <h2 class="top">Results</h2>
+                    <div id="ajax_target">
+                        <table class='table'>
+                            <tr>
+                                <th>Profile</th><th>Metric</th>
+                            </tr><tr>
+                                <td colspan=2 style='height: 200px'>
+                                    Use the form to the left to select the data 
+                                    you want.
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
                     {%else%}
                     <a href="/login">Login with your Google Account</a>
                     {% endif %}
@@ -215,7 +239,10 @@
 <div id="ajax-busy" style="display: none;">Elapsed time: 0 seconds</div>
     <script>    
     $(document).ready(function(){
-      //  getGoogleData($("#select_account").val(),$("#select_metric").val());
+        //  getGoogleData($("#select_account").val(),$("#select_metric").val());
+        $("#start_date,#end_date").datepicker({
+            dateFormat: "yy-mm-dd"
+            });
     });
     $("#select_account_button").click(function(){
         getGoogleData();
@@ -232,7 +259,6 @@
                 str = "Elapsed time: "+time+" seconds.<br/>Estimate: ("+percent+"%)"
             $("#ajax-busy").html(str);        
         },1000)
-        console.log(acct_len)
         metric = $("#select_metric").val();
         
         if(metric=="none"){return false;}
@@ -246,7 +272,6 @@
         if (end!=""){
             date_str+="&end_date="+end;
         }
-        $("#ajax_target").html("Loading...");
         $("#ajax-busy").show();
         $.ajax({
             url: "/gapi?accounts="+acct+"&metric="+metric+date_str, 
@@ -261,20 +286,36 @@
                 $("#start_date").prop('disabled', true);
                 $("#end_date").prop('disabled', true);
             },
-            success: function(data){
+            success: function(data){                
                 acct = $("#select_account").val();
                 metric = $("#select_metric").val();
                 acct_name = $("#select_account option:selected").text();
                 metric_name = $("#select_metric option:selected").text();
-                h_str = "<h3>"+acct_name+" Profiles</h3><h4>"+metric_name+" - ";
-                h_str+= data[0]['start']+" to "+data[0]['end']+"</h4>";
-                h_str+="<table class='table'>";
-                h_str+="<tr><th>Profile</th><th>"+metric_name+"</th></tr>";
+                
+                var m_names = new Array("January", "February", "March", 
+                    "April", "May", "June", "July", "August", "September", 
+                    "October", "November", "December");
+                
+                sd = new Date(data[0]['start']+" EDT");                
+                start_display = m_names[sd.getMonth()]+" ";
+                start_display += sd.getDate()+", ";
+                start_display += sd.getFullYear();
+                
+                ed = new Date(data[0]['end']+" EDT");                
+                end_display = m_names[ed.getMonth()]+" ";
+                end_display += ed.getDate()+", ";
+                end_display += ed.getFullYear();
+                
+                h_str = "<h3>"+acct_name+" Profiles</h3><h4>"+metric_name+"</h4>";
+                h_str+= "<b>"+start_display+"</b> to <b>"+end_display+"</b>";
+                h_str+="<table class='table table-striped table-condensed table-bordered'>";
+                h_str+="<tr><th>Profile</th><th>"+metric_name+"</th></tr><tbody>";
                 for(i=0;i<data.length;i++){
                     name = data[i]['name'];
                     value = data[i][metric]
                     h_str+="<tr><td>"+name+"</td><td>"+value+"</td></tr>";
                 }
+                h_str += "</tbody></table>";
                 $("#ajax_target").html( h_str ) ;
                 acct = $("#select_account").prop('disabled', false);
                 metric = $("#select_metric").prop('disabled', false);

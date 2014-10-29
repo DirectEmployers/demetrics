@@ -1,6 +1,7 @@
 import datetime
 import httplib2
 import json
+import locale
 import time
 from apiclient.discovery import build
 from demetrics.queries import redirects as redirects_queries
@@ -23,6 +24,7 @@ flow = OAuth2WebServerFlow(
 TOKEN_FILE_NAME = 'analytics.dat'
 VIEW_ID = settings.GA_VIEW_ID
 
+locale.setlocale(locale.LC_ALL, 'en_US.utf8')
 
 def read_my_jobs(request):
     """
@@ -129,7 +131,7 @@ def ga_ajax(request):
     
     for prop in props:
         prop_sessions = ga.get_ga_metric(
-            serv,prop['id'],metric,start,end)
+            serv,prop['id'],metric,start,end)        
         try:
             if prop_sessions:
                 for row in prop_sessions.get('rows'):
@@ -137,10 +139,13 @@ def ga_ajax(request):
                     for cell in row:
                         #cell_data.append(cell)
                         cell_data = int(cell)
-
+                    
+                    cell_data_formated = locale.format("%d", 
+                        cell_data, grouping=True)
                     node = {
                         'name': prop['name'],
-                        metric: cell_data,
+                        metric: cell_data_formated, 
+                        'raw_metric': cell_data, 
                         'start': ga.get_default_date(start,"start"),
                         'end': ga.get_default_date(end,"end"),
                         }
@@ -153,7 +158,7 @@ def ga_ajax(request):
         ga_data = "{'name':'error','Metric':'There was an error',}"
 
     try: # sort the results by descending metric count
-        ga_data = sorted(ga_data, key=itemgetter(metric))
+        ga_data = sorted(ga_data, key=itemgetter('raw_metric'))
         ga_data.reverse() 
     except: # skip if there is a key error, type error, or some other mismatch
         pass
