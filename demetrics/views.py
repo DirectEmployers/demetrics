@@ -139,7 +139,6 @@ def ga_ajax(request):
                     for cell in row:
                         #cell_data.append(cell)
                         cell_data = int(cell)
-                    print prop
                     cell_data_formated = locale.format("%d", 
                         cell_data, grouping=True)
                     node = {
