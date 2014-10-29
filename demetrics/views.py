@@ -139,11 +139,11 @@ def ga_ajax(request):
                     for cell in row:
                         #cell_data.append(cell)
                         cell_data = int(cell)
-                    
                     cell_data_formated = locale.format("%d", 
                         cell_data, grouping=True)
                     node = {
                         'name': prop['name'],
+                        'url': prop['websiteUrl'],
                         metric: cell_data_formated, 
                         'raw_metric': cell_data, 
                         'start': ga.get_default_date(start,"start"),
