@@ -14,6 +14,14 @@ class DateMetric(models.Model):
 class DotJobsSite(models.Model):
     url = models.URLField()
     name = models.CharField(max_length=255)
+    google_analytics_account = models.ForeignKey('GoogleAnalyticsAccount')
     
     def __unicode__(self):
         return str(self.url)
+        
+class GoogleAnalyticsAccount(models.Model):
+    account_id = models.CharField(max_length=25)
+    account_name = models.CharField(max_length=255)
+    
+    def __unicode__(self):
+        return "%s - %s" % (self.account_id,self.account_name)

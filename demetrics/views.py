@@ -1,10 +1,11 @@
-import datetime
+from datetime import datetime
 import httplib2
 import json
 import locale
 import time
 from apiclient.discovery import build
 from demetrics.queries import redirects as redirects_queries
+from demetrics.models import *
 from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.db import connection, connections, transaction
@@ -27,17 +28,49 @@ VIEW_ID = settings.GA_VIEW_ID
 
 locale.setlocale(locale.LC_ALL, 'en_US.utf8')
 
-def read_google(request):
-    # Google API Section
+def google_cache(request):
     try: # We only want to run this if there is a valid OAuth object
         ga = GoogleAnalytics()
         serv = ga.initialize_service()
         accounts = ga.get_microsite_accounts(serv)
     except: # There are a number of possible exceptions, hence the catch-all
-        accounts = False
+        accounts = []
+        
+    account_list = []
     
+    for account in accounts:
+        try:
+            acct = GoogleAnalyticsAccount.objects.get(account_id=account['id'])
+        except GoogleAnalyticsAccount.DoesNotExist:
+            acct = GoogleAnalyticsAccount()
+            acct.account_id=account['id']
+            acct.account_name=account['name']
+            acct.save()
+        
+    
+    db_accounts = GoogleAnalyticsAccount.objects.all()
+    for account in db_accounts:
+        account_list.append(account.account_id)
+        
+    return account_list    
+
+def read_google(request):
+    """
+    Handle requests for google data by first looking in the database, where
+    results from the API have been cached.
+    
+    """
+    accounts = GoogleAnalyticsAccount.objects.all()
+    account_ajax = []
+    for account in accounts:
+        acct_dict = {
+            'id': account.account_id,
+            'name': account.account_name,
+        }
+        account_ajax.append(acct_dict)
+        
     data_dict = {
-        'accounts': accounts,
+        'accounts': account_ajax,
         }
 
     return render_to_response('google.html', data_dict, RequestContext(request))
@@ -93,7 +126,160 @@ def read_my_jobs(request):
 
     return render_to_response('table.html', data_dict, RequestContext(request))
 
-
+def update_metrics(request):
+    """
+    Performs a query of the Google Analytics API and returns the results as a
+    JSON object. 
+    
+    Inputs (via GET):
+    :accounts:  comma delimited list of google account numbers
+    :metric:    the specific metric type being requested
+    :start_date:the start date (future functionality)
+    :end_date:  tne end date (future functionality)
+    
+    Returns:
+    JSON results
+    
+    """
+    
+    try:
+        ga = GoogleAnalytics()
+        serv = ga.initialize_service()
+    except:
+        return HttpResponse(json.dumps({'error':'expired or bad token'}),
+            content_type="application/json")
+    ga_data = []    
+    #accounts = request.GET.get('accounts').split(",")
+    accounts = google_cache(request)[0:1]
+    print "accounts: %s" % accounts
+    try:
+        metric = request.GET.get('metric')
+    except KeyError:
+        metric = 'sessions'
+    
+    try:
+        start = request.GET.get('start_date')
+    except KeyError:
+        start=False
+    try:
+        end = request.GET.get('end_date')
+    except KeyError:
+        end=False
+    start = ga.get_default_date(start,"start")
+    end = ga.get_default_date(end,"end")
+    start_dt = datetime.datetime.strptime(start, '%Y-%m-%d')
+    end_dt = datetime.datetime.strptime(end, '%Y-%m-%d')
+    
+    try:
+        props = ga.get_microsite_profiles(serv, accounts)
+    except:
+        return HttpResponse(json.dumps({'error':'expired or bad token'}),
+            content_type="application/json")
+    
+    day_count = (end_dt-start_dt).days+1
+    date_list = []
+    while day_count>0:
+        temp_date = end_dt - datetime.timedelta(days=day_count)
+        temp_date = temp_date.strftime('%Y-%m-%d')
+        day_count -= 1
+        date_list.append(temp_date)
+        
+    print date_list
+        
+    for prop in props:
+        try:
+            site = DotJobsSite.objects.get(url=prop['websiteUrl'])
+        except DotJobsSite.DoesNotExist:
+            site = DotJobsSite()
+            site.url = prop['websiteUrl']
+            site.name = prop['name']
+            acct = GoogleAnalyticsAccount.objects.get(
+                account_id=prop['accountId'])
+            site.google_analytics_account = acct
+            site.save()
+        
+        # break up date range to individual days and loop for each day
+        
+            
+        for day in date_list:
+            prop_sessions = ga.get_ga_metric(
+                serv,prop['id'],metric,day,day)        
+            try:
+                if prop_sessions:
+                    for row in prop_sessions.get('rows'):
+                        #print row
+                        cell_list = []
+                        cell_list_raw = []                    
+                        for cell in row:
+                            #cell_data.append(cell)
+                            cell_data = int(cell)                        
+                            cell_data_formated = locale.format("%d", 
+                                cell_data, grouping=True)
+                            cell_list.append(cell_data_formated)
+                            cell_list_raw.append(cell_data)
+                        
+                        
+                        try:
+                            # convert day to datetime
+                            day_dt = datetime.datetime.strptime(day, '%Y-%m-%d')
+                            # look up metric by site & date
+                            data = DateMetric.object.get(date=day_dt, dotjobssite=site)
+                        except DateMetric.DoesNotExist:
+                            print "create new"
+                            metric = DateMetric()
+                            metric.date = dat_dt
+                            metric.dotjobssite=site
+                            metric.sessions = cell_list[0]
+                            metric.users = cell_list[1],
+                            metric.page_views = cell_list[2],
+                            metric.organic_searches = cell_list [3],
+                            metric.save()
+                            #'raw_metric': cell_list_raw[0],
+                            #a = GoogleAnalyticsAccount()
+                            #a.account_id=account['id']
+                            #a.account_name=account['name']
+                            #a.save()
+                            #account_list.append(account['id'])
+                            
+                            
+                        node = {
+                            'name': prop['name'],
+                            'url': prop['websiteUrl'],
+                            #metric: cell_list[0], 
+                            'sessions': cell_list[0],
+                            'users': cell_list[1],
+                            'pageviews': cell_list[2],
+                            'organic': cell_list [3],
+                            'raw_metric': cell_list_raw[0], 
+                            'start': ga.get_default_date(day,"start"),
+                            'end': ga.get_default_date(day,"end"),
+                            }
+                        ga_data.append(node)
+            except:
+                print "error handling would be good, but not a priority yet"
+            time.sleep(.25)
+       
+    
+    if len(ga_data)==0:
+        ga_data = "{'name':'error','Metric':'There was an error',}"
+    
+    
+    try: # sort the results by descending metric count
+        ga_data = sorted(ga_data, key=itemgetter('raw_metric'))
+        ga_data.reverse() 
+    except: # skip if there is a key error, type error, or some other mismatch
+        pass
+    
+    
+    data_dict = {
+        'ga_data': ga_data,
+        }
+        
+    return HttpResponse(json.dumps(ga_data), content_type="application/json")
+    
+    
+    
+    
 def ga_ajax(request):
     """
     Performs a query of the Google Analytics API and returns the results as a
@@ -109,13 +295,16 @@ def ga_ajax(request):
     JSON results
     
     """
+    
+    """
     try:
         ga = GoogleAnalytics()
         serv = ga.initialize_service()
     except:
         return HttpResponse(json.dumps({'error':'expired or bad token'}),
             content_type="application/json")
-        
+    """    
+    ga = GoogleAnalytics()
     accounts = request.GET.get('accounts').split(",")
     try:
         metric = request.GET.get('metric')
@@ -130,14 +319,66 @@ def ga_ajax(request):
         end = request.GET.get('end_date')
     except KeyError:
         end=False
-
+    start = ga.get_default_date(start,"start")
+    end = ga.get_default_date(end,"end")
+    
+    """
     try:
         props = ga.get_microsite_profiles(serv, accounts)
     except:
         return HttpResponse(json.dumps({'error':'expired or bad token'}),
             content_type="application/json")
+    """
+    sites = []
+    temp = []    
     ga_data=[]
     
+    for account in accounts:
+        print account
+        account_obj = GoogleAnalyticsAccount.objects.get(account_id=account)
+        dj_sites = DotJobsSite.objects.filter(
+            google_analytics_account = account_obj
+            )
+        for dj_site in dj_sites:
+            sites.append(dj_site)
+            
+    #print sites
+    for site in sites:
+        date_metrics = DateMetric.objects.filter(
+            dotjobssite=site
+            ).filter(
+            date__gte=start
+            ).filter(
+            date__lte=end
+            )
+        sessions = 0
+        users = 0
+        pageviews = 0
+        organic = 0
+        
+        for date_metric in date_metrics:
+            #temp.append(date_metric)
+            sessions += date_metric.sessions
+            users += date_metric.users
+            pageviews += date_metric.page_views
+            organic += date_metric.organic_searches
+    
+        node = {
+            'name': site.name,
+            'url': site.url, 
+            'sessions': locale.format("%d", sessions, grouping=True),
+            'users': users,
+            'pageviews': pageviews,
+            'organic': organic,
+            'raw_metric': sessions, 
+            'start': start,
+            'end': end,
+            }
+        ga_data.append(node)
+        
+    #print ga_data
+    
+    """
     for prop in props:
         prop_sessions = ga.get_ga_metric(
             serv,prop['id'],metric,start,end)        
@@ -174,13 +415,15 @@ def ga_ajax(request):
 
     if len(ga_data)==0:
         ga_data = "{'name':'error','Metric':'There was an error',}"
-
+    """
+    
     try: # sort the results by descending metric count
         ga_data = sorted(ga_data, key=itemgetter('raw_metric'))
         ga_data.reverse() 
     except: # skip if there is a key error, type error, or some other mismatch
         pass
-
+    
+    
     data_dict = {
         'ga_data': ga_data,
         }
