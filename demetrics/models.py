@@ -9,7 +9,7 @@ class DateMetric(models.Model):
     dotjobssite = models.ForeignKey('DotJobsSite')    
 
     def __unicode__(self):
-        return str(self.date)
+        return "%s - %s" % (self.dotjobssite, self.date)
 
 class DotJobsSite(models.Model):
     url = models.URLField()

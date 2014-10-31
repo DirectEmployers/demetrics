@@ -1,9 +1,10 @@
-from datetime import datetime
 import httplib2
 import json
 import locale
+import sys
 import time
 from apiclient.discovery import build
+from datetime import datetime
 from demetrics.queries import redirects as redirects_queries
 from demetrics.models import *
 from django.conf import settings
@@ -150,8 +151,8 @@ def update_metrics(request):
             content_type="application/json")
     ga_data = []    
     #accounts = request.GET.get('accounts').split(",")
-    accounts = google_cache(request)[0:1]
-    print "accounts: %s" % accounts
+    accounts = google_cache(request)
+    #print "accounts: %s" % accounts
     try:
         metric = request.GET.get('metric')
     except KeyError:
@@ -179,14 +180,16 @@ def update_metrics(request):
     day_count = (end_dt-start_dt).days+1
     date_list = []
     while day_count>0:
-        temp_date = end_dt - datetime.timedelta(days=day_count)
+        temp_date = end_dt - datetime.timedelta(days=day_count-1)
         temp_date = temp_date.strftime('%Y-%m-%d')
         day_count -= 1
         date_list.append(temp_date)
         
-    print date_list
-        
     for prop in props:
+        """
+        Populate the list of sites from the property URL values. Do this by 
+        attempting a lookup from the DB, and if that fails, create a DB entry.        
+        """
         try:
             site = DotJobsSite.objects.get(url=prop['websiteUrl'])
         except DotJobsSite.DoesNotExist:
@@ -196,69 +199,67 @@ def update_metrics(request):
             acct = GoogleAnalyticsAccount.objects.get(
                 account_id=prop['accountId'])
             site.google_analytics_account = acct
-            site.save()
+            site.save()        
         
-        # break up date range to individual days and loop for each day
-        
-            
+        """
+        For the date range specified, pull down each metric in day chunks. The
+        system will store in these discreet chunks and sum them as needed to 
+        generate counts for longer periods of time.
+        """
         for day in date_list:
             prop_sessions = ga.get_ga_metric(
                 serv,prop['id'],metric,day,day)        
-            try:
-                if prop_sessions:
-                    for row in prop_sessions.get('rows'):
-                        #print row
-                        cell_list = []
-                        cell_list_raw = []                    
-                        for cell in row:
-                            #cell_data.append(cell)
-                            cell_data = int(cell)                        
-                            cell_data_formated = locale.format("%d", 
-                                cell_data, grouping=True)
-                            cell_list.append(cell_data_formated)
-                            cell_list_raw.append(cell_data)
-                        
-                        
-                        try:
-                            # convert day to datetime
-                            day_dt = datetime.datetime.strptime(day, '%Y-%m-%d')
-                            # look up metric by site & date
-                            data = DateMetric.object.get(date=day_dt, dotjobssite=site)
-                        except DateMetric.DoesNotExist:
-                            print "create new"
-                            metric = DateMetric()
-                            metric.date = dat_dt
-                            metric.dotjobssite=site
-                            metric.sessions = cell_list[0]
-                            metric.users = cell_list[1],
-                            metric.page_views = cell_list[2],
-                            metric.organic_searches = cell_list [3],
-                            metric.save()
-                            #'raw_metric': cell_list_raw[0],
-                            #a = GoogleAnalyticsAccount()
-                            #a.account_id=account['id']
-                            #a.account_name=account['name']
-                            #a.save()
-                            #account_list.append(account['id'])
-                            
-                            
-                        node = {
-                            'name': prop['name'],
-                            'url': prop['websiteUrl'],
-                            #metric: cell_list[0], 
-                            'sessions': cell_list[0],
-                            'users': cell_list[1],
-                            'pageviews': cell_list[2],
-                            'organic': cell_list [3],
-                            'raw_metric': cell_list_raw[0], 
-                            'start': ga.get_default_date(day,"start"),
-                            'end': ga.get_default_date(day,"end"),
-                            }
-                        ga_data.append(node)
-            except:
-                print "error handling would be good, but not a priority yet"
-            time.sleep(.25)
-       
+            if prop_sessions:
+                rows = prop_sessions.get('rows')
+                sessions_count = 0
+                users_count = 0
+                page_views_count = 0
+                organic_searches_count = 0
+                
+                if not rows:
+                    rows = []
+                for row in rows:
+                    #print row
+                    cell_list = []
+                    cell_list_raw = []                    
+                    for cell in row:
+                        cell_data = int(cell)                        
+                        cell_list.append(cell_data)
+                        cell_list_raw.append(cell_data)
+                    sessions_count = cell_list[0]
+                    users_count = cell_list[1]
+                    page_views_count = cell_list[2]
+                    organic_searches_count = cell_list[3]              
+                
+                
+                try:
+                    metric = DateMetric.objects.get(date=day, dotjobssite=site)
+                except DateMetric.DoesNotExist:
+                    metric = DateMetric()
+                    metric.date = day
+                    metric.dotjobssite=site
+                    metric.sessions = sessions_count
+                    metric.users = users_count
+                    metric.page_views = page_views_count
+                    metric.organic_searches = organic_searches_count
+                    metric.save()                            
+                    
+                node = {
+                    'name': prop['name'],
+                    'url': prop['websiteUrl'],
+                    'sessions': cell_list[0],
+                    'users': cell_list[1],
+                    'pageviews': cell_list[2],
+                    'organic': cell_list [3],
+                    'raw_metric': cell_list_raw[0], 
+                    'start': ga.get_default_date(day,"start"),
+                    'end': ga.get_default_date(day,"end"),
+                    }
+                ga_data.append(node)
+                #except:
+                #    print sys.exc_info()
+                #    #print "error handling would be good, but not a priority yet"
+            time.sleep(.5)       
     
     if len(ga_data)==0:
         ga_data = "{'name':'error','Metric':'There was an error',}"
@@ -367,9 +368,9 @@ def ga_ajax(request):
             'name': site.name,
             'url': site.url, 
             'sessions': locale.format("%d", sessions, grouping=True),
-            'users': users,
-            'pageviews': pageviews,
-            'organic': organic,
+            'users': locale.format("%d", users, grouping=True),
+            'pageviews': locale.format("%d", pageviews, grouping=True),
+            'organic': locale.format("%d", organic, grouping=True),
             'raw_metric': sessions, 
             'start': start,
             'end': end,
