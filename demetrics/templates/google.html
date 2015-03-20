@@ -12,7 +12,7 @@
             var chart = new google.visualization.Calendar(document.getElementById('availableDates'));
             
             var options = {
-            title: "Red Sox Attendance",
+            title: "Cached Dates",
             height: 350,
             };
             
@@ -132,7 +132,26 @@
     })
 
     function getAvailableDates(){
-        date_data = [
+        acct = $("#select_account").val()
+        if (acct.length>10){
+            return false;
+        }
+        $.ajax({
+            url: "/account_dates?account="+acct,
+            success: function(data){
+                date_data = []                
+                for(i=0;i<data.dates.length;i++){
+                    date_array = data.dates[i].split("-")
+                    date_obj = new Date(date_array[0],date_array[1]-1,date_array[2])
+                    date_data.push([date_obj,50000]);                    
+                }
+                //console.log(date_data);
+                drawAvailableDates(date_data)
+                $("#availableDates").css("width","1000px");
+                $("#availableDates").css("height","350px");
+            } 
+        });
+        /*date_data = [
                 [ new Date(2012, 3, 13), 37032 ],
                 [ new Date(2012, 3, 14), 38024 ],
                 [ new Date(2012, 3, 15), 38024 ],
@@ -150,7 +169,7 @@
             ];
         drawAvailableDates(date_data)
         $("#availableDates").css("width","1000px");
-        $("#availableDates").css("height","350px");
+        $("#availableDates").css("height","350px");*/
     }
     
     function getGoogleData(){

@@ -56,6 +56,30 @@ def google_cache(request):
     return account_list    
 
 
+def get_site_dates(request):
+    account = request.GET.get("account")
+    try:
+        account_obj = GoogleAnalyticsAccount.objects.get(account_id=account)
+    except GoogleAnalyticsAccount.DoesNotExist:
+        return HttpResponse(json.dumps({}),content_type="application/json")
+    
+    sites = DotJobsSite.objects.filter(google_analytics_account = account_obj)
+    date_list = []
+    for site in sites:
+        dates = DateMetric.objects.filter(dotjobssite=site)
+        #site_dates = []
+        for date in dates:
+            date_list.append(datetime.datetime.strftime(date.date, '%Y-%m-%d'))
+        
+
+    account_dates = {
+        "account": account_obj.account_name,
+        "dates": date_list,
+    }
+    
+    return HttpResponse(json.dumps(account_dates), content_type="application/json")
+
+
 def read_google(request,role):
     """
     Handle requests for google data by first looking in the database, where
