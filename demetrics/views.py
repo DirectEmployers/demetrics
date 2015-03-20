@@ -55,7 +55,7 @@ def google_cache(request):
         
     return account_list    
 
-def read_google(request):
+def read_google(request,role):
     """
     Handle requests for google data by first looking in the database, where
     results from the API have been cached.
@@ -72,8 +72,9 @@ def read_google(request):
         
     data_dict = {
         'accounts': account_ajax,
+        'role': role,
         }
-
+    
     return render_to_response('google.html', data_dict, RequestContext(request))
     
 def read_my_jobs(request):
@@ -127,6 +128,11 @@ def read_my_jobs(request):
 
     return render_to_response('table.html', data_dict, RequestContext(request))
 
+def update_database(request):
+    accounts = google_cache(request)
+    data_dict = {}
+    return render_to_response('update.html', data_dict, RequestContext(request))
+
 def update_metrics(request):
     """
     Performs a query of the Google Analytics API and returns the results as a
@@ -135,8 +141,8 @@ def update_metrics(request):
     Inputs (via GET):
     :accounts:  comma delimited list of google account numbers
     :metric:    the specific metric type being requested
-    :start_date:the start date (future functionality)
-    :end_date:  tne end date (future functionality)
+    :start_date:the start date (as get param)
+    :end_date:  tne end date (as get param)
     
     Returns:
     JSON results
@@ -150,8 +156,8 @@ def update_metrics(request):
         return HttpResponse(json.dumps({'error':'expired or bad token'}),
             content_type="application/json")
     ga_data = []    
-    #accounts = request.GET.get('accounts').split(",")
-    accounts = google_cache(request)
+    accounts = request.GET.get('accounts').split(",")
+    #accounts = google_cache(request)
     #print "accounts: %s" % accounts
     try:
         metric = request.GET.get('metric')
@@ -204,9 +210,10 @@ def update_metrics(request):
         """
         For the date range specified, pull down each metric in day chunks. The
         system will store in these discreet chunks and sum them as needed to 
-        generate counts for longer periods of time.
+        generate counts for longer periods of time. This is buggy because of
+        how restrictive the Google API is with requests per second.
         """
-        for day in date_list:
+        for day in date_list:            
             prop_sessions = ga.get_ga_metric(
                 serv,prop['id'],metric,day,day)        
             if prop_sessions:
@@ -259,7 +266,8 @@ def update_metrics(request):
                 #except:
                 #    print sys.exc_info()
                 #    #print "error handling would be good, but not a priority yet"
-            time.sleep(.5)       
+            # go to sleep little loop, or google will time out and eat you
+            time.sleep(1)       
     
     if len(ga_data)==0:
         ga_data = "{'name':'error','Metric':'There was an error',}"

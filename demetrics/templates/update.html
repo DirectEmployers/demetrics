@@ -1,19 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
             <div class="row">
-                <h2>Google Analytics</h2>
+                <h2>Google Analytics Profile Updater</h2>
             </div>
             <div class="row">
                 <div class="span4">
                     <div class="sidebar">
-                    
-                    <h2 class="top">
-                    {% if role == "view" %}
-                        Search
-                    {% else %}
-                        Update
-                    {% endif %}
-                    </h2>
+                    <h2 class="top">Search</h2>
                     {% if accounts %}
                     Account:<br/><select id="select_account">
                         <option 
@@ -24,9 +17,8 @@
                         <option {% if forloop.first %}SELECTED {% endif %}value="{{account.id}}">{{account.name}}</option>
                     {% endfor %}
                     </select><br/>
-                    <!--
                     Metric:<br/>
-                    
+                    <!--
                     Selection criteria for metrics. Keeping it in case there is
                     ever a need to specify metrics over the default set returned
                     
@@ -39,15 +31,8 @@
                     </select><br/>
                     
                     -->
-                    {% if role == "view" %}
-                        Start Date:
-                    {% else %}
-                        Date to retrieve:
-                    {% endif %}
-                        <br/><input id="start_date"></input><br/>
-                    {% if role != "update" %}
+                    Start Date:<br/><input id="start_date"></input><br/>
                     End Date:<br/><input id="end_date"</input><br/>
-                    {% endif %}
                     <button id="select_account_button" class="primary btn">
                         Get Data
                     </button>
@@ -105,7 +90,6 @@
     })
 
     function getGoogleData(){
-        role = "{{role}}";
         acct = $("#select_account").val();
         acct_len = acct.split(",").length
         total_time_est = 20*acct_len;
@@ -125,22 +109,15 @@
         start = $("#start_date").val();
         end = $("#end_date").val();
         date_str = ""
-        if (role=="update"){
-            ajax_url = "/update_metrics";
-            end = start
-        }
         if (start!=""){
             date_str+="&start_date="+start;
         }
-        
         if (end!=""){
             date_str+="&end_date="+end;
         }
         $("#ajax-busy").show();
-        ajax_url = "/gapi";
-        
         $.ajax({
-            url: ajax_url+"?accounts="+acct+"&metric="+metric+date_str,
+            url: "/update_metrics?accounts="+acct+"&metric="+metric+date_str, 
             xhrFields:{
                 onprogress: function(e){
                     if (e.lengthComputable) { console.log(e.loaded) }
