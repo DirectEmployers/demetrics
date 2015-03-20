@@ -141,9 +141,9 @@
             success: function(data){
                 date_data = []                
                 for(i=0;i<data.dates.length;i++){
-                    date_array = data.dates[i].split("-")
+                    date_array = data.dates[i][0].split("-")
                     date_obj = new Date(date_array[0],date_array[1]-1,date_array[2])
-                    date_data.push([date_obj,50000]);                    
+                    date_data.push([date_obj,data.dates[i][1]]);                    
                 }
                 //console.log(date_data);
                 drawAvailableDates(date_data)

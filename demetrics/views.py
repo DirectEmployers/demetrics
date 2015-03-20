@@ -69,7 +69,7 @@ def get_site_dates(request):
         dates = DateMetric.objects.filter(dotjobssite=site)
         #site_dates = []
         for date in dates:
-            date_list.append(datetime.datetime.strftime(date.date, '%Y-%m-%d'))
+            date_list.append([datetime.datetime.strftime(date.date, '%Y-%m-%d'),date.sessions])
         
 
     account_dates = {
