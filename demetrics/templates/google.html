@@ -1,7 +1,33 @@
 {% extends "base.html" %}
+{% block html-header %}
+    <script type="text/javascript" src="https://www.google.com/jsapi"></script>
+    <script type="text/javascript">
+        google.load("visualization", "1.1", {packages:["calendar"]});
+        function drawAvailableDates(date_data) {
+            var dataTable = new google.visualization.DataTable();
+            dataTable.addColumn({ type: 'date', id: 'Date' });
+            dataTable.addColumn({ type: 'number', id: 'Won/Loss' });
+            dataTable.addRows(date_data);
+            
+            var chart = new google.visualization.Calendar(document.getElementById('availableDates'));
+            
+            var options = {
+            title: "Red Sox Attendance",
+            height: 350,
+            };
+            
+            chart.draw(dataTable, options);
+        }
+    </script>
+{% endblock html-header %}
 {% block content %}
             <div class="row">
                 <h2>Google Analytics</h2>
+            </div>
+            <div class="row">
+                <div class="span12">
+                    <div id="availableDates"></div>
+                </div>
             </div>
             <div class="row">
                 <div class="span4">
@@ -99,11 +125,34 @@
         $("#start_date,#end_date").datepicker({
             dateFormat: "yy-mm-dd"
             });
+        $("#select_account").change(getAvailableDates);
     });
     $("#select_account_button").click(function(){
         getGoogleData();
     })
 
+    function getAvailableDates(){
+        date_data = [
+                [ new Date(2012, 3, 13), 37032 ],
+                [ new Date(2012, 3, 14), 38024 ],
+                [ new Date(2012, 3, 15), 38024 ],
+                [ new Date(2012, 3, 16), 38108 ],
+                [ new Date(2012, 3, 17), 38229 ],
+                // Many rows omitted for brevity.
+                [ new Date(2013, 9, 4), 38177 ],
+                [ new Date(2013, 9, 5), 38705 ],
+                [ new Date(2013, 9, 12), 38210 ],
+                [ new Date(2013, 9, 13), 38029 ],
+                [ new Date(2013, 9, 19), 38823 ],
+                [ new Date(2013, 9, 23), 38345 ],
+                [ new Date(2013, 9, 24), 38436 ],
+                [ new Date(2013, 9, 30), 38447 ]
+            ];
+        drawAvailableDates(date_data)
+        $("#availableDates").css("width","1000px");
+        $("#availableDates").css("height","350px");
+    }
+    
     function getGoogleData(){
         role = "{{role}}";
         acct = $("#select_account").val();
