@@ -208,7 +208,12 @@
         end = $("#end_date").val();
         acct = $("#select_account").val();
         acct_len = acct.split(",").length
-        str = "<b>"+start+"</b> is not cached. Retrieving data from Google."
+        if (start==end){
+            date_str = start;
+        }else{
+            date_str = start+" - "+end;
+        }
+        str = "<b>"+date_str+"</b> is not cached. Retrieving data from Google."
         $("#ajax-busy span").html(str);
         time = 0
         ajax_timer = setInterval(function(){
@@ -226,7 +231,6 @@
         ajax_url = "/gapi";
         if (role=="update"){
             ajax_url = "/update_metrics";
-            end = start
         }
         if (start!=""){
             date_str+="&start_date="+start;
