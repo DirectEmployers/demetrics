@@ -70,8 +70,7 @@ def get_site_dates(request):
         #site_dates = []
         for date in dates:
             date_list.append([datetime.datetime.strftime(date.date, '%Y-%m-%d'),date.sessions])
-        
-
+    
     account_dates = {
         "account": account_obj.account_name,
         "dates": date_list,
@@ -307,9 +306,10 @@ def update_metrics(request):
     
     data_dict = {
         'ga_data': ga_data,
+        'cache_status': 2,
         }
         
-    return HttpResponse(json.dumps(ga_data), content_type="application/json")
+    return HttpResponse(json.dumps(data_dict), content_type="application/json")
     
     
     
@@ -376,7 +376,8 @@ def ga_ajax(request):
         for dj_site in dj_sites:
             sites.append(dj_site)
             
-    #print sites
+    cache_status = 1 # Assume there is a cache until proven otherwise
+    sum_test = 0 # total results. if 0 at end,m then there is no cache
     for site in sites:
         date_metrics = DateMetric.objects.filter(
             dotjobssite=site
@@ -396,6 +397,7 @@ def ga_ajax(request):
             users += date_metric.users
             pageviews += date_metric.page_views
             organic += date_metric.organic_searches
+            sum_test += sessions+users+pageviews+organic            
     
         node = {
             'name': site.name,
@@ -409,47 +411,9 @@ def ga_ajax(request):
             'end': end,
             }
         ga_data.append(node)
-        
-    #print ga_data
     
-    """
-    for prop in props:
-        prop_sessions = ga.get_ga_metric(
-            serv,prop['id'],metric,start,end)        
-        try:
-            if prop_sessions:
-                for row in prop_sessions.get('rows'):
-                    #print row
-                    cell_list = []
-                    cell_list_raw = []                    
-                    for cell in row:
-                        #cell_data.append(cell)
-                        cell_data = int(cell)                        
-                        cell_data_formated = locale.format("%d", 
-                            cell_data, grouping=True)
-                        cell_list.append(cell_data_formated)
-                        cell_list_raw.append(cell_data)
-                        
-                    node = {
-                        'name': prop['name'],
-                        'url': prop['websiteUrl'],
-                        #metric: cell_list[0], 
-                        'sessions': cell_list[0],
-                        'users': cell_list[1],
-                        'pageviews': cell_list[2],
-                        'organic': cell_list [3],
-                        'raw_metric': cell_list_raw[0], 
-                        'start': ga.get_default_date(start,"start"),
-                        'end': ga.get_default_date(end,"end"),
-                        }
-                    ga_data.append(node)
-        except:
-            pass # error handling would be good, but not a priority yet
-        time.sleep(.25)
-
-    if len(ga_data)==0:
-        ga_data = "{'name':'error','Metric':'There was an error',}"
-    """
+    if sum_test==0:
+        cache_status = 0
     
     try: # sort the results by descending metric count
         ga_data = sorted(ga_data, key=itemgetter('raw_metric'))
@@ -460,9 +424,10 @@ def ga_ajax(request):
     
     data_dict = {
         'ga_data': ga_data,
+        'cache_status': cache_status,
         }
         
-    return HttpResponse(json.dumps(ga_data), content_type="application/json")
+    return HttpResponse(json.dumps(data_dict), content_type="application/json")
 
 
 def GAAuth(request):
