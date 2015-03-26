@@ -6,7 +6,7 @@
         function drawAvailableDates(date_data) {
             var dataTable = new google.visualization.DataTable();
             dataTable.addColumn({ type: 'date', id: 'Date' });
-            dataTable.addColumn({ type: 'number', id: 'Won/Loss' });
+            dataTable.addColumn({ type: 'number', id: 'Sessions' });
             dataTable.addRows(date_data);
             
             var chart = new google.visualization.Calendar(document.getElementById('availableDates'));
@@ -16,7 +16,40 @@
             height: 350,
             };
             
+            
+            function selectHandler() {
+                item = chart.getSelection()[0];
+                if(typeof(item.row)!="undefined"){
+                    date = dataTable.getValue(item.row, 0);
+                    cached = true;
+                }else{
+                    date = new Date(item['date'])
+                    cached = false;
+                }
+                console.log(date)
+                
+                date_str = date.getFullYear();
+                date_str+= "-";
+                date_str+= (date.getMonth()+1);
+                date_str+= "-";
+                date_str+= date.getDate();   
+                
+                
+                $("#start_date").val(date_str);
+                $("#end_date").val(date_str);
+                if (cached){
+                    getGoogleData();
+                }else{
+                    getGoogleData('update');
+                }
+            }
+            google.visualization.events.addListener(chart, 'select', selectHandler);
+            
             chart.draw(dataTable, options);
+        }
+        function getDateString(date){
+            
+            return date_str
         }
     </script>
 {% endblock html-header %}
@@ -26,7 +59,9 @@
             </div>
             <div class="row">
                 <div class="span12">
-                    <div id="availableDates"></div>
+                    <div id="availableDatesWrapper" style="overflow-y: auto; overflow-x: hidden; height: auto; max-height: 180px; margin: 5px 0 20px 0">
+                        <div id="availableDates"></div>
+                    </div>
                 </div>
             </div>
             <div class="row">
@@ -42,12 +77,13 @@
                     </h2>
                     {% if accounts %}
                     Account:<br/><select id="select_account">
+                        <option value="False" SELECTED>Select Profile...</option>
                         <option 
                             value="1101211,6392841,8308612,9599997,12430800,16316580,20577364,23584545,24609654,24939159,25741851,26313745,26937129,27826544,28646010,29216021,29240965,29293285,29613651,29952564,29954972,30367743,30689069,30814211,30824274,30922762,30955275,31390202,32988266,35490901,37974452,40997820,44339952,47178210,50261450,53418614">
                             All
                         </option>
                     {% for account in accounts %}
-                        <option {% if forloop.first %}SELECTED {% endif %}value="{{account.id}}">{{account.name}}</option>
+                        <option value="{{account.id}}">{{account.name}}</option>
                     {% endfor %}
                     </select><br/>
                     <!--
@@ -83,7 +119,7 @@
                     <div class="sidebar">
                     <h2 class="top">Results</h2>
                     <div id="ajax-busy">
-                        <span>Elapsed time: 0 seconds</span>
+                        <span>This date is not cached. Retrieving data from Google.</span>
                         <div class='progress_bar' style=""></div>
                     </div>
                     <div id="ajax_target">
@@ -151,48 +187,33 @@
                 $("#availableDates").css("height","350px");
             } 
         });
-        /*date_data = [
-                [ new Date(2012, 3, 13), 37032 ],
-                [ new Date(2012, 3, 14), 38024 ],
-                [ new Date(2012, 3, 15), 38024 ],
-                [ new Date(2012, 3, 16), 38108 ],
-                [ new Date(2012, 3, 17), 38229 ],
-                // Many rows omitted for brevity.
-                [ new Date(2013, 9, 4), 38177 ],
-                [ new Date(2013, 9, 5), 38705 ],
-                [ new Date(2013, 9, 12), 38210 ],
-                [ new Date(2013, 9, 13), 38029 ],
-                [ new Date(2013, 9, 19), 38823 ],
-                [ new Date(2013, 9, 23), 38345 ],
-                [ new Date(2013, 9, 24), 38436 ],
-                [ new Date(2013, 9, 30), 38447 ]
-            ];
-        drawAvailableDates(date_data)
-        $("#availableDates").css("width","1000px");
-        $("#availableDates").css("height","350px");*/
     }
     
-    function getGoogleData(){
-        role = "{{role}}";
+    function getGoogleData(role){
+        if (typeof(role)=='undefined'){
+            role = "{{role}}";
+        }
+        start = $("#start_date").val();
+        end = $("#end_date").val();
         acct = $("#select_account").val();
         acct_len = acct.split(",").length
-        total_time_est = 20*acct_len;
+        //total_time_est = 20*acct_len;
+        str = "<b>"+start+"</b> is not cached. Retrieving data from Google."//Elapsed time: "+time;//+" seconds. Estimate: ("+percent+"%)"
+        $("#ajax-busy span").html(str);
         time = 0
         ajax_timer = setInterval(function(){
-                time++;
-                percent = parseInt(time/total_time_est*100)
-                if (percent>99) {percent = 99;}
-                str = "Elapsed time: "+time+" seconds. Estimate: ("+percent+"%)"
-            $("#ajax-busy .progress_bar").css("width",percent+"%")
-            $("#ajax-busy span").html(str);        
+            time++;
+            percent = parseInt(time/100*100)
+            if (percent>99) {percent = 99;}                
+            $("#ajax-busy .progress_bar").css("width",percent+"%")            
         },1000)
         metric = $("#select_metric").val();
         
         if(metric=="none"){return false;}
         
-        start = $("#start_date").val();
-        end = $("#end_date").val();
+        
         date_str = ""
+        ajax_url = "/gapi";
         if (role=="update"){
             ajax_url = "/update_metrics";
             end = start
@@ -205,7 +226,7 @@
             date_str+="&end_date="+end;
         }
         $("#ajax-busy").show();
-        ajax_url = "/gapi";
+        
         
         $.ajax({
             url: ajax_url+"?accounts="+acct+"&metric="+metric+date_str,
