@@ -6,7 +6,11 @@ class DateMetric(models.Model):
     organic_searches = models.IntegerField(max_length=999999999)
     users = models.IntegerField(max_length=999999999)
     page_views = models.IntegerField(max_length=999999999)
-    dotjobssite = models.ForeignKey('DotJobsSite')    
+    dotjobssite = models.ForeignKey('DotJobsSite')
+    referrals = models.IntegerField(max_length=999999999)
+    direct = models.IntegerField(max_length=999999999)
+    feeds = models.IntegerField(max_length=999999999)
+    campaigns = models.IntegerField(max_length=999999999)
 
     def __unicode__(self):
         return "%s - %s" % (self.dotjobssite, self.date)

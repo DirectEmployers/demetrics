@@ -71,7 +71,17 @@ DATABASES = {
         'PORT': PROD_DB_PORT
     }
 }
-
+"""
+    'viewsource':{
+        'NAME': VSDB_NAME,
+        'ENGINE': 'sqlserver_ado',
+        'USER': VSDB_USER,
+        'PASSWORD': VSDB_PASSWD,
+        'HOST': VSDB_HOST,
+        'PORT': VSDB_PORT
+    }
+}
+"""
 # Internationalization
 # https://docs.djangoproject.com/en/1.7/topics/i18n/
 

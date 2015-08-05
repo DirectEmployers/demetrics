@@ -246,11 +246,15 @@ def update_metrics(request):
                 users_count = 0
                 page_views_count = 0
                 organic_searches_count = 0
+                referrals = 0
+                direct = 0
+                feeds = 0
+                campaigns = 0
                 
                 if not rows:
                     rows = []
                 for row in rows:
-                    #print row
+                    print "row: %s"%row
                     cell_list = []
                     cell_list_raw = []                    
                     for cell in row:
@@ -260,7 +264,13 @@ def update_metrics(request):
                     sessions_count = cell_list[0]
                     users_count = cell_list[1]
                     page_views_count = cell_list[2]
-                    organic_searches_count = cell_list[3]              
+                    organic_searches_count = cell_list[3]
+                    """
+                    referrals = cell_list[4]
+                    direct = cell_list[5]
+                    feeds = cell_list[6]
+                    campaigns = cell_list[7]
+                    """
                 
                 
                 try:

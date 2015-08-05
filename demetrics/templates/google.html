@@ -121,6 +121,12 @@
                     <button id="select_account_button" class="primary btn">
                         Get Data
                     </button>
+                    <br/><br/>
+                    <b>Get by Week</b>
+                    <div>
+                        <a href="#">Most recent week</a><br/>
+                        <a href="#">Last week</a>
+                    </div>
                     </div>
                 </div>
                 <div class="span8">
@@ -172,7 +178,7 @@
         $("#select_account").change(getAvailableDates);
     });
     $("#select_account_button").click(function(){
-        getGoogleData();
+        getGoogleDataFromForm();
     })
 
     function getAvailableDates(){
@@ -197,7 +203,7 @@
         });
     }
     force_update = "{{role}}";
-    function getGoogleData(role){
+    function getGoogleDataFromForm(role){
         if (typeof(role)=='undefined'){
             role = $("input[name='role']:checked").val()            
         }
@@ -207,6 +213,9 @@
         start = $("#start_date").val();
         end = $("#end_date").val();
         acct = $("#select_account").val();
+        getGoogleData(role,start,end,acct);
+    }
+    function getGoogleData(role,start,end,acct){
         acct_len = acct.split(",").length
         if (start==end){
             date_str = start;
